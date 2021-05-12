@@ -1,0 +1,48 @@
+version: '3'
+services:
+
+  authors:
+    image: bff-authors-service:latest
+    container_name: bff-authors-service
+    ports:
+        - 8081:80
+    environment:
+        - NOTIFICATION_URL=http://bff-push-service/api/push
+        - AUTH_TOKEN=test123323testtoken
+  
+  books:
+    image: bff-books-service:latest
+    container_name: bff-books-service
+    ports:
+        - 8082:80
+    environment:
+        - NOTIFICATION_URL=http://bff-push-service/api/push
+        - AUTH_TOKEN=test123323testtoken
+  
+  web-sockets:
+    image: bff-push-service:latest
+    container_name: bff-push-service
+    ports:
+       - 8080:80
+
+  frontend_app:
+    image: web-client:latest
+    container_name: web-client
+    environment:
+      - NOTIFICATION_WS_URL=ws://bff-push-service/ws
+      - AUTHORS_SERVICE_URL=http://bff-authors-service/api/authors
+      - AUTHORS_AUTH_TOKEN=test123323testtoken
+      - CLIENT_TYPE=WEB
+    depends_on:
+      - web-sockets
+
+  mobile_app:
+    image: mobile-client:latest
+    container_name: mobile-client
+    environment:
+      - NOTIFICATION_WS_URL=ws://bff-push-service/ws
+      - AUTHORS_SERVICE_URL=http://bff-authors-service/api/authors
+      - AUTHORS_AUTH_TOKEN=test123323testtoken
+      - CLIENT_TYPE=MOBILE
+    depends_on:
+      - web-sockets
