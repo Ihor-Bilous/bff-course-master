@@ -4,7 +4,7 @@ import json
 
 import websockets
 
-from app.config import NOTIFICATION_WS_URL
+from app.config import GATEWAY_SERVICE_WS_URL, AUTHORS_AUTH_TOKEN
 from app.processor import MessageHandler
 
 
@@ -14,7 +14,8 @@ if CLIENT_TYPE not in ["WEB", "MOBILE"]:
 
 
 async def consumer() -> None:
-    async with websockets.connect(NOTIFICATION_WS_URL) as websocket:
+    async with websockets.connect(
+            f"{GATEWAY_SERVICE_WS_URL}/", extra_headers={"authorization": AUTHORS_AUTH_TOKEN}) as websocket:
         async for message in websocket:
             resp = await MessageHandler(CLIENT_TYPE, json.loads(message)).handle()
             print(resp)

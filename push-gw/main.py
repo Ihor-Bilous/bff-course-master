@@ -1,9 +1,9 @@
 import asyncio
+import json
 
+import aioredis
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
 
-from app.api.api import api_router
 from app.api.notifier import notifier
 from app.core.config import settings
 
@@ -14,45 +14,26 @@ app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_ENDPOINT}
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await notifier.connect(websocket)
     try:
-        while True:
-            await asyncio.sleep(0)
+        await redis_connector()
     except WebSocketDisconnect:
         notifier.remove(websocket)
 
 
-@app.on_event("startup")
-async def startup() -> None:
-    await notifier.generator.asend(None)
+async def redis_connector():
 
+    async def producer_handler(r):
+        (channel,) = await r.subscribe("notifications")
+        assert isinstance(channel, aioredis.Channel)
+        while True:
+            message = await channel.get()
+            if message:
+                await notifier.broadcast(json.loads(message.decode("utf-8")))
 
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>WebSocket Log</title>
-    </head>
-    <body>
-        <h1>WebSocket Log</h1>
-        <ul id='messages'>
-        </ul>
-        <script>
-            var ws = new WebSocket("ws://localhost:8080/ws");
-            ws.onmessage = function(event) {
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
-            };
-        </script>
-    </body>
-</html>
-"""
+    redis = await aioredis.create_redis_pool(settings.REDIS_URL)
 
-
-@app.get("/")
-async def get() -> HTMLResponse:
-    return HTMLResponse(html)
-
-
-app.include_router(api_router, prefix=settings.API_ENDPOINT)
+    producer_task = producer_handler(redis)
+    done, pending = await asyncio.wait([producer_task, ])
+    for task in pending:
+        task.cancel()
+    redis.close()
+    await redis.wait_closed()

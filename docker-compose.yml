@@ -1,48 +1,60 @@
 version: '3'
 services:
 
+  redis:
+    image: "redis:alpine"
+
   authors:
     image: bff-authors-service:latest
     container_name: bff-authors-service
-    ports:
-        - 8081:80
-    environment:
-        - NOTIFICATION_URL=http://bff-push-service/api/push
-        - AUTH_TOKEN=test123323testtoken
-  
+    depends_on:
+      - redis
+
   books:
     image: bff-books-service:latest
     container_name: bff-books-service
-    ports:
-        - 8082:80
-    environment:
-        - NOTIFICATION_URL=http://bff-push-service/api/push
-        - AUTH_TOKEN=test123323testtoken
+    depends_on:
+      - redis
+
+  frontend:
+    image: bff-frontend-service:latest
+    container_name: bff-frontend-service
+    depends_on:
+      - books
+      - authors
   
-  web-sockets:
+  notifications:
     image: bff-push-service:latest
     container_name: bff-push-service
+    depends_on:
+      - redis
+
+  api-gateway:
+    image: bff-api-gateway:latest
+    container_name: bff-api-gateway
     ports:
        - 8080:80
+    depends_on:
+      - authors
+      - books
+      - notifications
+    environment:
+      - AUTH_TOKEN=test123323testtoken
 
-  frontend_app:
+  web_app:
     image: web-client:latest
     container_name: web-client
     environment:
-      - NOTIFICATION_WS_URL=ws://bff-push-service/ws
-      - AUTHORS_SERVICE_URL=http://bff-authors-service/api/authors
       - AUTHORS_AUTH_TOKEN=test123323testtoken
       - CLIENT_TYPE=WEB
     depends_on:
-      - web-sockets
+      - api-gateway
 
   mobile_app:
     image: mobile-client:latest
     container_name: mobile-client
     environment:
-      - NOTIFICATION_WS_URL=ws://bff-push-service/ws
-      - AUTHORS_SERVICE_URL=http://bff-authors-service/api/authors
       - AUTHORS_AUTH_TOKEN=test123323testtoken
       - CLIENT_TYPE=MOBILE
     depends_on:
-      - web-sockets
+      - api-gateway

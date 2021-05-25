@@ -4,7 +4,7 @@ from enum import Enum
 
 import aiohttp
 
-from .config import AUTHORS_SERVICE_URL, AUTHORS_AUTH_TOKEN
+from app.config import GATEWAY_SERVICE_URL, AUTHORS_AUTH_TOKEN
 
 
 class MessageType(Enum):
@@ -24,7 +24,7 @@ def get_message_type(message: typing.Dict) -> typing.Optional[MessageType]:
 async def get_author(author_id: int) -> dict:
     async with aiohttp.ClientSession() as session:
         async with session.get(
-            f"{AUTHORS_SERVICE_URL}/{author_id}",
+            f"{GATEWAY_SERVICE_URL}/api/authors/{author_id}",
             headers={
                 "Authorization": AUTHORS_AUTH_TOKEN
             }
@@ -83,7 +83,6 @@ class MessageHandler:
         elif self.client_type == "MOBILE":
             return MobileBookMessageFormatter
         raise Exception
-
 
     def _get_author_formatter_cls(self):
         if self.client_type == "WEB":

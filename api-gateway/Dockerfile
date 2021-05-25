@@ -1,4 +1,4 @@
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
+FROM tiangolo/uvicorn-gunicorn:python3.8
 
 WORKDIR /app/
 
@@ -10,3 +10,4 @@ COPY . /app
 
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+ENV MAX_WORKERS=1
