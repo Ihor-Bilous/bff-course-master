@@ -1,9 +1,18 @@
 version: '3'
 services:
 
+  # db and queues
   redis:
     image: "redis:alpine"
 
+  # notificator
+  notifications:
+    image: bff-push-service:latest
+    container_name: bff-push-service
+    depends_on:
+      - redis
+
+  # internal services
   authors:
     image: bff-authors-service:latest
     container_name: bff-authors-service
@@ -16,22 +25,25 @@ services:
     depends_on:
       - redis
 
+  # aggregators
   frontend:
     image: bff-frontend-service:latest
     container_name: bff-frontend-service
     depends_on:
       - books
       - authors
-  
-  notifications:
-    image: bff-push-service:latest
-    container_name: bff-push-service
-    depends_on:
-      - redis
 
-  api-gateway:
-    image: bff-api-gateway:latest
-    container_name: bff-api-gateway
+  frontend-mobile:
+    image: bff-frontend-mobile-service:latest
+    container_name: bff-frontend-mobile-service
+    depends_on:
+      - books
+      - authors
+
+  # gateways
+  api-gateway-frontend:
+    image: bff-api-gateway-frontend:latest
+    container_name: bff-api-gateway-frontend
     ports:
        - 8080:80
     depends_on:
@@ -41,6 +53,19 @@ services:
     environment:
       - AUTH_TOKEN=test123323testtoken
 
+  api-gateway-mobile:
+    image: bff-api-gateway-mobile:latest
+    container_name: bff-api-gateway-mobile
+    ports:
+      - 8081:80
+    depends_on:
+      - authors
+      - books
+      - notifications
+    environment:
+      - AUTH_TOKEN=test123323testtoken
+
+  # console apps
   web_app:
     image: web-client:latest
     container_name: web-client
@@ -48,7 +73,7 @@ services:
       - AUTHORS_AUTH_TOKEN=test123323testtoken
       - CLIENT_TYPE=WEB
     depends_on:
-      - api-gateway
+      - api-gateway-frontend
 
   mobile_app:
     image: mobile-client:latest
@@ -57,4 +82,4 @@ services:
       - AUTHORS_AUTH_TOKEN=test123323testtoken
       - CLIENT_TYPE=MOBILE
     depends_on:
-      - api-gateway
+      - api-gateway-mobile
